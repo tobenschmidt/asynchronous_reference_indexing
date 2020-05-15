@@ -6,18 +6,7 @@ $EM_CONF[$_EXTKEY] = [
   'author' => 'Claus Due',
   'author_email' => 'claus@namelesscoder.net',
   'author_company' => '',
-  'shy' => '',
-  'dependencies' => '',
-  'conflicts' => '',
-  'priority' => '',
-  'module' => '',
   'state' => 'beta',
-  'internal' => '',
-  'uploadfolder' => 0,
-  'createDirs' => '',
-  'modify_tables' => '',
-  'clearCacheOnLoad' => 0,
-  'lockType' => '',
   'version' => '2.1.0',
   'constraints' => [
     'depends' => [
@@ -27,6 +16,4 @@ $EM_CONF[$_EXTKEY] = [
     'conflicts' => [],
     'suggests' => [],
   ],
-  'suggests' => [],
-  '_md5_values_when_last_written' => '',
 ];
