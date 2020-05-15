@@ -6,7 +6,11 @@ use NamelessCoder\AsyncReferenceIndexing\Traits\ReferenceIndexQueueAware;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Database\ReferenceIndex;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Extbase\Mvc\Controller\CommandController;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
  * Async Reference Index Commands
@@ -15,11 +19,22 @@ use TYPO3\CMS\Extbase\Mvc\Controller\CommandController;
  * based on the queue maintained by the DataHandler
  * override shipped with this extension.
  */
-class AsyncReferenceIndexCommandController extends CommandController
+class AsyncReferenceIndexCommand extends Command
 {
     use ReferenceIndexQueueAware;
 
     const LOCKFILE = 'typo3temp/var/reference-indexing-running.lock';
+
+    /**
+     * Configure the asynchronous reference indexing command
+     */
+    protected function configure()
+    {
+        $this->setDescription('Update the reference index');
+        $this->addOption('force', null, InputOption::VALUE_NONE, 'force');
+        $this->addOption('check', null, InputOption::VALUE_NONE, 'check');
+        $this->addOption('silent', null, InputOption::VALUE_NONE, 'silent');
+    }
 
     /**
      * Update Reference Index
@@ -27,21 +42,24 @@ class AsyncReferenceIndexCommandController extends CommandController
      * Updates the reference index - if providing the -f parameter the
      * indexing will index directly to sys_refindex - else the
      *
-     * @param boolean $force
-     * @param boolean $check
-     * @param boolean $silent
+     * @param InputInterface $input
+     * @param OutputInterface $output
      *
      * @return void
      */
-    public function updateCommand($force = false, $check = false, $silent = false) {
-        if ($force) {
+    protected function execute(InputInterface $input, OutputInterface $output) {
+        if ($input->getOption('force')) {
             AsyncReferenceIndex::captureReferenceIndex(false);
             $refIndexObj = GeneralUtility::makeInstance(ReferenceIndex::class);
-            $refIndexObj->updateIndex($check, !$silent);
+            $refIndexObj->updateIndex($input->getOption('check'), !$input->getOption('silent'));
         }
         else {
-            $this->updateReferenceIndex();
+            $io = new SymfonyStyle($input, $output);
+            $io->title($this->getDescription());
+            $io->writeln('Write something');
+            //$this->updateReferenceIndex();
         }
+        return 0;
     }
 
     /**
