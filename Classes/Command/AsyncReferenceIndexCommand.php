@@ -31,16 +31,18 @@ class AsyncReferenceIndexCommand extends Command
     protected function configure()
     {
         $this->setDescription('Update the reference index');
-        $this->addOption('force', null, InputOption::VALUE_NONE, 'force');
-        $this->addOption('check', null, InputOption::VALUE_NONE, 'check');
-        $this->addOption('silent', null, InputOption::VALUE_NONE, 'silent');
+        $this->addOption('force', 'f', InputOption::VALUE_NONE, 'Index directly to sys_refindex without asynchronous indexing');
+        $this->addOption('check', 'c', InputOption::VALUE_NONE, 'Check reference index without modification if indexing directly to sys_refindex');
+        $this->addOption('silent', 's', InputOption::VALUE_NONE, 'Suppress output if indexing directly to sys_refindex');
     }
 
     /**
      * Update Reference Index
      *
-     * Updates the reference index - if providing the -f parameter the
-     * indexing will index directly to sys_refindex - else the
+     * Updates the reference index - if providing the --force option the
+     * indexing will index directly to sys_refindex, additional --check
+     * option will only check sys_refindex without modification, --silent
+     * option will suppress output
      *
      * @param InputInterface $input
      * @param OutputInterface $output
@@ -56,8 +58,7 @@ class AsyncReferenceIndexCommand extends Command
         else {
             $io = new SymfonyStyle($input, $output);
             $io->title($this->getDescription());
-            $io->writeln('Write something');
-            //$this->updateReferenceIndex();
+            $this->updateReferenceIndex($io);
         }
         return 0;
     }
@@ -69,27 +70,28 @@ class AsyncReferenceIndexCommand extends Command
      * processing the queue maintained by
      * the overridden DataHandler class.
      *
+     * @param SymfonyStyle $io
      * @return void
      */
-    protected function updateReferenceIndex()
+    protected function updateReferenceIndex(SymfonyStyle $io)
     {
         $lockFile = GeneralUtility::getFileAbsFileName(static::LOCKFILE);
         if (file_exists($lockFile)) {
-            $this->response->setContent('Another process is updating the reference index - skipping' . PHP_EOL);
+            $io->writeln('Another process is updating the reference index - skipping');
             return;
         }
 
         $count = $this->performCount('tx_asyncreferenceindexing_queue');
 
         if (!$count) {
-            $this->response->setContent('No reference indexing tasks queued - nothing to do.' . PHP_EOL);
+            $io->writeln('No reference indexing tasks queued - nothing to do.');
             return;
         }
 
         $this->lock();
 
-        $this->response->setContent(
-            'Processing reference index for ' . $count . ' record(s)' . PHP_EOL
+        $io->writeln(
+            'Processing reference index for ' . $count . ' record(s)'
         );
 
         // Note about loop: a fresh instance of ReferenceIndex is *intentional*. The class mutates
@@ -120,12 +122,12 @@ class AsyncReferenceIndexCommand extends Command
                 );
 
             }
-            $this->response->appendContent('Reference indexing complete!' . PHP_EOL);
+            $io->writeln('Reference indexing complete!');
             $this->unlock();
 
         } catch (\Exception $error) {
 
-            $this->response->appendContent('ERROR! ' . $error->getMessage() . ' (' . $error->getCode() . ')' . PHP_EOL);
+            $io->writeln('ERROR! ' . $error->getMessage() . ' (' . $error->getCode() . ')');
             $this->unlock();
 
         }
