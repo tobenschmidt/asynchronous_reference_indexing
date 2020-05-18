@@ -1,0 +1,14 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: false
+
+  NamelessCoder\AsyncReferenceIndexing\:
+    resource: '../Classes/*'
+
+  NamelessCoder\AsyncReferenceIndexing\EventListener\IsTableExcludedFromReferenceIndexEventListener:
+    tags:
+      - name: event.listener
+        identifier: 'asynchronous_reference_indexing/IsTableExcludedFromReferenceIndexEventListener'
+        event: TYPO3\CMS\Core\DataHandling\Event\IsTableExcludedFromReferenceIndexEvent
