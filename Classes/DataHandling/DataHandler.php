@@ -8,7 +8,7 @@ use NamelessCoder\AsyncReferenceIndexing\Traits\ReferenceIndexQueueAware;
  *
  * Override of core's DataHandler to remove capability to do on-the-fly
  * reference indexing, instead delegating that task to the provided
- * command controller. The command controller can be used directly from
+ * Symfony Console Command. The command can be used directly from
  * CLI, put into crontab or via the Scheduler system extension.
  *
  * The runs can be scheduled as frequently as desired. Indexing will only
