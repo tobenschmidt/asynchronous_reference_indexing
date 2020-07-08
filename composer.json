@@ -1,10 +1,10 @@
 {
-    "name": "namelesscoder/asynchronous-reference-indexing",
+    "name": "tobenschmidt/asynchronous-reference-indexing",
     "type": "typo3-cms-extension",
     "license": "GPL-2.0-or-later",
     "preferred-install": "dist",
     "require": {
-        "typo3/cms-backend": "^8|^9"
+        "typo3/cms-backend": "^10"
     },
     "autoload": {
         "psr-4": {
