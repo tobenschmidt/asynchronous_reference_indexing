@@ -13,10 +13,10 @@ Provides a couple of things:
 * A similar override for the ReferenceIndex class which replaces methods called also outside
   of DataHandler, to catch those cases.
 * An SQL table storing queued reference index updates.
-* A CommandController which can be executed via CLI to process queued reference indexing
+* A Symfony Command which can be executed via CLI or scheduler to process queued reference indexing
   without running into timeout or long wait issues.
-* Provides option to exclude tables from reference indexing (only on TYPO3 8.6+). See extension configuration.
-  
+* Provides option to exclude tables from reference indexing. See extension configuration.
+
 Depending on how often your editors perform record imports, copies, deletions etc. this can over
 time save many, many hours of waiting for the TYPO3 backend to respond.
 
@@ -42,14 +42,14 @@ Word of warning
 
 Failing to update the reference index can have negative effects on your site in some cases, both
 in frontend and backend. You are advised to add a scheduler task or cronjob for the included
-command controller *and set the frequency to a very low value such as once every minute*. The
-controller maintains a lock file and prevents parallel executions, so frequent runs are safe.
+Symfony Console Command *and set the frequency to a very low value such as once every minute*. The
+command maintains a lock file and prevents parallel executions, so frequent runs are safe.
 
 Note that this extension consistently captures all of the current reference indexing, including
 that which you can trigger using the existing (non-Extbase) CLI command or via the "DB check"
 backend module which is added when you install the `lowlevel` system extension. Using either of
 these methods to force reference index updating will instead fill the queue for the command
-controller included with *this* extension so that all existing records which have relations
+included with *this* extension so that all existing records which have relations
 will be processed on the next run.
 
 Possible side effects
@@ -59,7 +59,7 @@ Delaying update of the reference index has one main side effect: if the editor t
 record whose relations have not been indexed, an appropriate warning may not be shown.
 
 Secondary side effect is in listing of relationships between records. Such information will be
-updated only when the command controller runs.
+updated only when the command runs.
 
 Frontend rendering should not be affected negatively.
 
@@ -67,16 +67,16 @@ Usage
 -----
 
 To re-index a site from scratch you would normally execute the following command, if you have
-a lot of garbage in the sys_refindex table you might wan't to truncate it before:
+a lot of garbage in the sys_refindex table you might want to truncate it before:
 
 ```
-TYPO3_PATH_ROOT=$PWD/web vendor/bin/typo3cms asyncreferenceindex:update --force 1
+TYPO3_PATH_ROOT=$PWD/web vendor/bin/typo3cms asynchronous_reference_indexing:index --force
 ```
 
 Afterwards you can update the sys_refindex by executing the command:
 
 ```
-TYPO3_PATH_ROOT=$PWD/web vendor/bin/typo3cms asyncreferenceindex:update
+TYPO3_PATH_ROOT=$PWD/web vendor/bin/typo3cms asynchronous_reference_indexing:index
 ```
 
 Alternatively you can setup a Scheduler Task to execute the command at a certain interval.

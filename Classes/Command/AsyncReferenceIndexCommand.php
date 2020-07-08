@@ -6,7 +6,11 @@ use NamelessCoder\AsyncReferenceIndexing\Traits\ReferenceIndexQueueAware;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Database\ReferenceIndex;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Extbase\Mvc\Controller\CommandController;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
  * Async Reference Index Commands
@@ -15,33 +19,48 @@ use TYPO3\CMS\Extbase\Mvc\Controller\CommandController;
  * based on the queue maintained by the DataHandler
  * override shipped with this extension.
  */
-class AsyncReferenceIndexCommandController extends CommandController
+class AsyncReferenceIndexCommand extends Command
 {
     use ReferenceIndexQueueAware;
 
     const LOCKFILE = 'typo3temp/var/reference-indexing-running.lock';
 
     /**
+     * Configure the asynchronous reference indexing command
+     */
+    protected function configure()
+    {
+        $this->setDescription('Update the reference index');
+        $this->addOption('force', 'f', InputOption::VALUE_NONE, 'Index directly to sys_refindex without asynchronous indexing');
+        $this->addOption('check', 'c', InputOption::VALUE_NONE, 'Check reference index without modification if indexing directly to sys_refindex');
+        $this->addOption('silent', 's', InputOption::VALUE_NONE, 'Suppress output if indexing directly to sys_refindex');
+    }
+
+    /**
      * Update Reference Index
      *
-     * Updates the reference index - if providing the -f parameter the
-     * indexing will index directly to sys_refindex - else the
+     * Updates the reference index - if providing the --force option the
+     * indexing will index directly to sys_refindex, additional --check
+     * option will only check sys_refindex without modification, --silent
+     * option will suppress output
      *
-     * @param boolean $force
-     * @param boolean $check
-     * @param boolean $silent
+     * @param InputInterface $input
+     * @param OutputInterface $output
      *
      * @return void
      */
-    public function updateCommand($force = false, $check = false, $silent = false) {
-        if ($force) {
+    protected function execute(InputInterface $input, OutputInterface $output) {
+        if ($input->getOption('force')) {
             AsyncReferenceIndex::captureReferenceIndex(false);
             $refIndexObj = GeneralUtility::makeInstance(ReferenceIndex::class);
-            $refIndexObj->updateIndex($check, !$silent);
+            $refIndexObj->updateIndex($input->getOption('check'), !$input->getOption('silent'));
         }
         else {
-            $this->updateReferenceIndex();
+            $io = new SymfonyStyle($input, $output);
+            $io->title($this->getDescription());
+            $this->updateReferenceIndex($io);
         }
+        return 0;
     }
 
     /**
@@ -51,27 +70,28 @@ class AsyncReferenceIndexCommandController extends CommandController
      * processing the queue maintained by
      * the overridden DataHandler class.
      *
+     * @param SymfonyStyle $io
      * @return void
      */
-    protected function updateReferenceIndex()
+    protected function updateReferenceIndex(SymfonyStyle $io)
     {
         $lockFile = GeneralUtility::getFileAbsFileName(static::LOCKFILE);
         if (file_exists($lockFile)) {
-            $this->response->setContent('Another process is updating the reference index - skipping' . PHP_EOL);
+            $io->writeln('Another process is updating the reference index - skipping');
             return;
         }
 
         $count = $this->performCount('tx_asyncreferenceindexing_queue');
 
         if (!$count) {
-            $this->response->setContent('No reference indexing tasks queued - nothing to do.' . PHP_EOL);
+            $io->writeln('No reference indexing tasks queued - nothing to do.');
             return;
         }
 
         $this->lock();
 
-        $this->response->setContent(
-            'Processing reference index for ' . $count . ' record(s)' . PHP_EOL
+        $io->writeln(
+            'Processing reference index for ' . $count . ' record(s)'
         );
 
         // Note about loop: a fresh instance of ReferenceIndex is *intentional*. The class mutates
@@ -102,12 +122,12 @@ class AsyncReferenceIndexCommandController extends CommandController
                 );
 
             }
-            $this->response->appendContent('Reference indexing complete!' . PHP_EOL);
+            $io->writeln('Reference indexing complete!');
             $this->unlock();
 
         } catch (\Exception $error) {
 
-            $this->response->appendContent('ERROR! ' . $error->getMessage() . ' (' . $error->getCode() . ')' . PHP_EOL);
+            $io->writeln('ERROR! ' . $error->getMessage() . ' (' . $error->getCode() . ')');
             $this->unlock();
 
         }
